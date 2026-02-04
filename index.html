@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asphalt Web Edition</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* UI OVERLAYS */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      z-index: 10;
+      user-select: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h1 {
+      font-size: 5rem;
+      text-transform: uppercase;
+      letter-spacing: 5px;
+      margin-bottom: 0;
+      text-shadow: 0 0 20px #00ffff;
+      font-style: italic;
+    }
+
+    h2 {
+      font-size: 2rem;
+      color: #aaaaaa;
+      margin-top: 10px;
+    }
+
+    .btn {
+      margin-top: 40px;
+      padding: 20px 60px;
+      font-size: 2rem;
+      background: linear-gradient(45deg, #ff0055, #ff5500);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-weight: bold;
+      box-shadow: 0 0 30px rgba(255, 0, 85, 0.5);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 50px rgba(255, 0, 85, 0.8);
+    }
+
+    #game-ui {
+      pointer-events: none;
+      /* Let clicks pass through */
+      background: transparent;
+      justify-content: flex-start;
+      align-items: flex-start;
+    }
+
+    /* HUD Elements */
+    #speedometer {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00ffff;
+      text-shadow: 0 0 10px #00ffff;
+    }
+
+    #timer {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 2rem;
+      color: white;
+    }
+
+    #coin-counter {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      font-size: 1.5rem;
+      color: gold;
+      font-weight: bold;
+      text-shadow: 0 0 5px orange;
+    }
+
+    #controls-hint {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: #aaaaaa;
+      text-align: left;
+      line-height: 1.5;
+    }
+
+    #nitro-bar-container {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      border: 2px solid #555;
+      overflow: hidden;
+    }
+
+    #nitro-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #00ffff, #0055ff);
+      box-shadow: 0 0 15px #00ffff;
+      transform-origin: left;
+      transform: scaleX(0);
+      /* Start empty */
+    }
+
+    #interaction-prompt {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      color: white;
+      text-shadow: 0 0 10px black;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    /* Touch Controls */
+    #touch-controls {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      height: 150px;
+      pointer-events: none;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      box-sizing: border-box;
+      z-index: 20;
+    }
+
+    #steering-container {
+      width: 120px;
+      height: 120px;
+      pointer-events: auto;
+    }
+
+    #steering-wheel {
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 4px solid white;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    #steering-wheel::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 20px;
+      background: red;
+    }
+
+    #pedals-container {
+      display: flex;
+      gap: 20px;
+      pointer-events: auto;
+      align-items: flex-end;
+    }
+
+    #brake-pedal,
+    #gas-pedal {
+      width: 70px;
+      height: 120px;
+      border-radius: 10px;
+      border: 2px solid white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #brake-pedal {
+      background: rgba(255, 0, 0, 0.5);
+      height: 100px;
+      /* Brake slightly smaller than gas? Or wider? usually brake is wide. */
+      width: 90px;
+    }
+
+    #brake-pedal::before {
+      content: 'BRAKE';
+    }
+
+    #gas-pedal {
+      background: rgba(0, 255, 0, 0.5);
+    }
+
+    #gas-pedal::before {
+      content: 'GAS';
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 1. HOME SCREEN -->
+  <div id="home-screen" class="ui-layer">
+    <h1>Asphalt Web</h1>
+    <h2>City Edition</h2>
+    <div style="margin-top:20px; text-align:center;">
+      <h3 style="color:#aaa; text-transform:uppercase; font-size:1rem; letter-spacing:2px;">Customize Ride</h3>
+      <div id="styles" style="margin-bottom:15px;">
+        <button class="style-btn active" data-color="#ff0033"
+          style="background:#ff0033; width:30px; height:30px; border-radius:50%; border:2px solid #fff; margin:5px; cursor:pointer;"></button>
+        <button class="style-btn" data-color="#0055ff"
+          style="background:#0055ff; width:30px; height:30px; border-radius:50%; border:none; margin:5px; cursor:pointer;"></button>
+        <button class="style-btn" data-color="#00ff00"
+          style="background:#00ff00; width:30px; height:30px; border-radius:50%; border:none; margin:5px; cursor:pointer;"></button>
+        <button class="style-btn" data-color="#111111"
+          style="background:#111111; width:30px; height:30px; border-radius:50%; border:2px solid #555; margin:5px; cursor:pointer;"></button>
+        <button class="style-btn" data-color="#ffff00"
+          style="background:#ffff00; width:30px; height:30px; border-radius:50%; border:none; margin:5px; cursor:pointer;"></button>
+      </div>
+    </div>
+    <button id="start-btn" class="btn">Start Race</button>
+    <div style="margin-top:30px; color: #888;">
+      Controls: W/Arrow Up (Gas), Space (Nitro), A/D (Steer)
+    </div>
+  </div>
+
+  <!-- 2. GAME UI (HUD) - Initially Hidden -->
+  <div id="game-ui" class="ui-layer hidden">
+    <div id="nitro-bar-container">
+      <div id="nitro-fill"></div>
+    </div>
+    <div id="timer">0.00</div>
+    <div id="coin-counter">Coins: 0</div>
+    <div id="interaction-prompt">Press E to Interact</div>
+    <div id="speedometer">0 KM/H</div>
+    <div id="controls-hint">
+      ▲ Acceleration<br>
+      ◄ ► Steering<br>
+      ▼ Brake<br>
+      NITRO: Space
+    </div>
+
+    <!-- TOUCH CONTROLS -->
+    <div id="touch-controls">
+      <div id="steering-container">
+        <div id="steering-wheel"></div>
+      </div>
+      <div id="pedals-container">
+        <div id="brake-pedal"></div>
+        <div id="gas-pedal"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. END SCREEN - Initially Hidden -->
+  <div id="end-screen" class="ui-layer hidden">
+    <h1>Race Finished!</h1>
+    <h2 id="final-time">Time: 0.00s</h2>
+    <button id="restart-btn" class="btn">Play Again</button>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

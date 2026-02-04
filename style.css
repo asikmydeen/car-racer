@@ -1,0 +1,173 @@
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Orbitron', sans-serif;
+  /* Futuristic font */
+}
+
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+#speedometer {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  font-size: 48px;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+  font-weight: bold;
+}
+
+#nitro-bar {
+  position: absolute;
+  top: 60px;
+  /* Moved down to avoid overlap with anything */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 30px;
+  /* Thicker */
+  border: 3px solid #00ffff;
+  /* Neon border */
+  border-radius: 15px;
+  overflow: hidden;
+  background: rgba(50, 50, 50, 0.8);
+  /* Lighter background */
+  z-index: 100;
+  box-shadow: 0 0 15px #00ffff;
+  /* Glow */
+}
+
+#nitro-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff00de, #00ffff);
+  transition: width 0.1s;
+}
+
+#lap-timer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 24px;
+  color: #fff;
+}
+
+/* TOUCH CONTROLS */
+#touch-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Allow clicks to pass through to canvas, but children will catch events */
+  z-index: 50;
+}
+
+#steering-container {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  pointer-events: auto;
+  /* Catch touches */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  touch-action: none;
+  /* Prevent scrolling */
+}
+
+#steering-wheel {
+  width: 120px;
+  height: 120px;
+  background: transparent;
+  border: 8px solid #00ffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00ffff;
+}
+
+/* Internal spoke just for visual */
+#steering-wheel::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 10px;
+  background: #00ffff;
+  margin-top: 55px;
+}
+
+
+#pedals-container {
+  position: absolute;
+  bottom: 40px;
+  right: 40px;
+  display: flex;
+  gap: 20px;
+  pointer-events: auto;
+}
+
+#gas-pedal {
+  width: 80px;
+  height: 120px;
+  background: linear-gradient(to top, #00ff00, #005500);
+  border: 2px solid #fff;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  opacity: 0.8;
+  touch-action: none;
+}
+
+#gas-pedal:active {
+  transform: scale(0.95);
+  background: #00ff00;
+  box-shadow: 0 0 20px #00ff00;
+}
+
+#brake-pedal {
+  width: 60px;
+  height: 80px;
+  background: linear-gradient(to top, #ff0000, #550000);
+  border: 2px solid #fff;
+  border-radius: 10px;
+  margin-top: 40px;
+  /* Lower than gas */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  opacity: 0.8;
+  touch-action: none;
+}
+
+#brake-pedal:active {
+  transform: scale(0.95);
+  background: #ff0000;
+  box-shadow: 0 0 20px #ff0000;
+}

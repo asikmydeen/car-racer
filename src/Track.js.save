@@ -1,0 +1,231 @@
+imOOOOport * as THREE from 'three';
+OOBimport * as CANNON from 'cannon-es';
+OB
+export class Track {
+    constructor(scene, physicsWorld) {
+        this.scene = scene;
+  OO      this.physicsWorld = physicsWorld;
+        this.startPoint = new THREE.Vector3(0, 2, 0);
+   OB     this.endPoint = new THREE.Vector3(0, 0, 0);
+ OA   }O
+O
+    generate() {
+        // 1. Physics Ground
+        const groundBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Plane(),
+            material: this.physicsWorld.groundMaterial
+        });
+        groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        this.physicsWorld.addBody(groundBody);
+
+        // 2. Visual Ground
+        const cityGroundGeo = new THREE.PlaneGeometry(5000, 5000);
+        const cityGroundMat = new THREE.MeshStandardMaterial({
+            color: 0x444444,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        const cityGroundMesh = new THREE.Mesh(cityGroundGeo, cityGroundMat);
+        cityGroundMesh.rotation.x = -Math.PI / 2;
+        cityGroundMesh.position.y = -0.1;
+        cityGroundMesh.receiveShadow = true;
+        this.scene.add(cityGroundMesh);
+
+        // 3. Grid Generation
+        // Grid properties
+        const gridSize = 10; // 10x10 intersections
+        const blockSize = 200; // Distance between intersections
+        const roadWidth = 20;
+
+        // Calculate offset to center the grid around (0,0)
+        const offset = (gridSize - 1) * blockSize / 2;
+
+        this.startPoint.set(0, 2, 0); // Start at center
+        this.endPoint.set(blockSize * 2, 0, 0); // Arbitrary goal
+
+        for (let x = 0; x < gridSize; x++) {
+            for (let z = 0; z < gridSize; z++) {
+                const px = x * blockSize - offset;
+                const pz = z * blockSize - offset;
+
+                // Create Intersection at this node
+                this.createIntersection(px, pz, roadWidth);
+
+                // Create Road to the Right (East) if not last column
+                if (x < gridSize - 1) {
+                    this.createRoadSegment(
+                        px + roadWidth / 2, pz,
+                        px + blockSize - roadWidth / 2, pz,
+                        roadWidth
+                    );
+                }
+
+                // Create Road to the Bottom (South) if not last row
+                if (z < gridSize - 1) {
+                    this.createRoadSegment(
+                        px, pz + roadWidth / 2,
+                        px, pz + blockSize - roadWidth / 2,
+                        roadWidth
+                    );
+                }
+
+                // Fill the block to the bottom-right with content (buildings)
+                if (x < gridSize - 1 && z < gridSize - 1) {
+                    // Center of the block
+                    const blockCx = px + blockSize / 2;
+                    const blockCz = pz + blockSize / 2;
+                    this.populateBlock(blockCx, blockCz, blockSize - roadWidth, roadWidth);
+                }
+            }
+        }
+
+        // Add Outer Barriers
+        this.createOuterBarriers(gridSize, blockSize, roadWidth, offset);
+    }
+
+    createIntersection(x, z, width) {
+        const geo = new THREE.PlaneGeometry(width, width);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 }); // Darker for intersection
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, 0.06, z);
+        mesh.rotation.x = -Math.PI / 2;
+        this.scene.add(mesh);
+    }
+
+    createRoadSegment(x1, z1, x2, z2, width) {
+        // Calculate length and center
+        const dx = x2 - x1;
+        const dz = z2 - z1;
+        const length = Math.sqrt(dx * dx + dz * dz);
+        const cx = (x1 + x2) / 2;
+        const cz = (z1 + z2) / 2;
+        const angle = Math.atan2(dz, dx); // Angle in X-Z plane
+
+        const geo = new THREE.PlaneGeometry(length, width);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+        const mesh = new THREE.Mesh(geo, mat);
+
+        mesh.position.set(cx, 0.05, cz);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.rotation.z = -angle; // Standard plane is XY, rotated X-90 is XZ. Rotate Z to align.
+        this.scene.add(mesh);
+
+        // Add lane markings?
+        // Keep simple for now.
+    }
+
+    populateBlock(cx, cz, size, roadWidth) {
+        // Randomly place buildings in the block area
+        const numBuildings = 2 + Math.floor(Math.random() * 4);
+
+        for (let i = 0; i < numBuildings; i++) {
+            // Random pos within block
+            // Avoid getting too close to roads
+            const margin = 20;
+            const safeSize = size - margin * 2;
+            const bx = cx - safeSize / 2 + Math.random() * safeSize;
+            const bz = cz - safeSize / 2 + Math.random() * safeSize;
+
+            this.addBuilding(bx, bz);
+        }
+
+        // Add billboard occasionally
+        if (Math.random() > 0.7) {
+            const bx = cx - size / 4 + Math.random() * size / 2;
+            const bz = cz - size / 4 + Math.random() * size / 2;
+            this.addBillboard(bx, bz, Math.random() * Math.PI);
+        }
+    }
+
+    createOuterBarriers(gridSize, blockSize, roadWidth, offset) {
+        // Calculate bounds
+        const minX = -offset - roadWidth / 2;
+        const maxX = (gridSize - 1) * blockSize - offset + roadWidth / 2;
+        const minZ = -offset - roadWidth / 2;
+        const maxZ = (gridSize - 1) * blockSize - offset + roadWidth / 2;
+
+        const totalWidth = maxX - minX;
+        const totalHeight = maxZ - minZ;
+
+        // North (Min Z)
+        this.addBarrier(0, minZ, 0, totalWidth + 20); // Angle 0? Barrier logic uses angle
+        // Actually addBarrier(x, z, angle, length) uses angle perpendicluar to length?
+        // Looking at old code: "angle + PI/2".
+        // Let's rely on explicit coords.
+
+        // North Wall
+        this.addBarrierDirect((minX + maxX) / 2, minZ, totalWidth, 0);
+        // South Wall
+        this.addBarrierDirect((minX + maxX) / 2, maxZ, totalWidth, 0);
+        // West Wall
+        this.addBarrierDirect(minX, (minZ + maxZ) / 2, 0, totalHeight);
+        // East Wall
+        this.addBarrierDirect(maxX, (minZ + maxZ) / 2, 0, totalHeight);
+    }
+
+    addBarrierDirect(x, z, w, d) {
+        // If w > 0, horizontal wall. If d > 0, vertical wall.
+        const length = w > 0 ? w : d;
+        const isHorizontal = w > 0;
+
+        const height = 5;
+        const thickness = 2;
+
+        // Physics
+        const shape = new CANNON.Box(new CANNON.Vec3(
+            isHorizontal ? length / 2 : thickness / 2,
+            height / 2,
+            isHorizontal ? thickness / 2 : length / 2
+        ));
+        const body = new CANNON.Body({ mass: 0 });
+        body.addShape(shape);
+        body.position.set(x, height / 2, z);
+        this.physicsWorld.addBody(body);
+
+        // Visual
+        const geo = new THREE.BoxGeometry(
+            isHorizontal ? length : thickness,
+            3,
+            isHorizontal ? thickness : length
+        );
+        // Neon boundary
+        const mat = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.5
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(body.position);
+        this.scene.add(mesh);
+    }
+
+}
+}
+
+// Helper
+function createTextTexture(text) {
+    const canvas = document.createElement('canvas');
+    const width = 512;
+    const height = 256;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    const hue = Math.floor(Math.random() * 360);
+    ctx.fillStyle = `hsl(${hue}, 80%, 30%)`;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#fff';
+    ctx.strokeRect(0, 0, width, height);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 80px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, width / 2, height / 2);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+}
