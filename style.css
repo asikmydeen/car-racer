@@ -128,6 +128,28 @@ body {
   pointer-events: auto;
 }
 
+#boost-pedal {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(to top, #00ffff, #0055ff);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  margin-top: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  opacity: 0.8;
+  touch-action: none;
+}
+
+#boost-pedal:active {
+  transform: scale(0.95);
+  background: #00ffff;
+  box-shadow: 0 0 20px #00ffff;
+}
+
 #gas-pedal {
   width: 80px;
   height: 120px;

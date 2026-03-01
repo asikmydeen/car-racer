@@ -69,18 +69,46 @@ export class InputManager {
         let startX = 0;
         let isDragging = false;
         let currentAngle = 0;
+        let activeTouchId = null;
 
         const handleStart = (e) => {
             if (e.target.closest('#steering-container')) {
-                isDragging = true;
-                startX = e.touches ? e.touches[0].clientX : e.clientX;
-                e.preventDefault();
+                if (!isDragging) {
+                    isDragging = true;
+                    if (e.changedTouches) {
+                        const touch = e.changedTouches[0];
+                        activeTouchId = touch.identifier;
+                        startX = touch.clientX;
+                    } else {
+                        startX = e.clientX;
+                    }
+                }
+                // Do not call e.preventDefault() here globally on the container
+                // as it can block other simultaneous touches or gestures if not careful.
+                // However, since it's an overlay element, stopping propagation might be better if needed.
+                // For a multi-touch D-pad/steering, just capturing the startX is enough.
             }
         };
 
         const handleMove = (e) => {
             if (!isDragging) return;
-            const x = e.touches ? e.touches[0].clientX : e.clientX;
+
+            let x;
+            if (e.changedTouches) {
+                // Find the specific touch we are tracking
+                let foundTouch = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === activeTouchId) {
+                        x = e.changedTouches[i].clientX;
+                        foundTouch = true;
+                        break;
+                    }
+                }
+                if (!foundTouch) return; // The active touch didn't move
+            } else {
+                x = e.clientX;
+            }
+
             const deltaX = x - startX;
 
             // Map pixel drag to rotation angle (max 90 degrees)
@@ -92,21 +120,33 @@ export class InputManager {
 
             // Logic Output (-1 to 1)
             this.steeringValue = currentAngle / 90;
-
-            // Optional: Set keys for compatibility if Car.js ignores steeringValue
-            // But we will update Car.js
         };
 
-        const handleEnd = () => {
+        const handleEnd = (e) => {
+            if (e.changedTouches) {
+                // Only stop dragging if the tracked touch ended
+                let touchEnded = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === activeTouchId) {
+                        touchEnded = true;
+                        break;
+                    }
+                }
+                if (!touchEnded) return; // The active touch is still down
+            }
+
             isDragging = false;
+            activeTouchId = null;
             currentAngle = 0;
             this.steeringValue = 0;
             wheel.style.transform = `rotate(0deg)`;
         };
 
         container.addEventListener('touchstart', handleStart, { passive: false });
-        container.addEventListener('touchmove', handleMove, { passive: false });
-        container.addEventListener('touchend', handleEnd);
+        // Use window for move/end so dragging outside the element continues/stops properly
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
+        window.addEventListener('touchcancel', handleEnd);
 
         // Mouse fallback for testing
         container.addEventListener('mousedown', handleStart);
@@ -117,6 +157,7 @@ export class InputManager {
     setupPedals() {
         const gas = document.getElementById('gas-pedal');
         const brake = document.getElementById('brake-pedal');
+        const boost = document.getElementById('boost-pedal');
 
         if (gas) {
             const pressGas = (e) => { e.preventDefault(); this.keys.forward = true; };
@@ -136,6 +177,15 @@ export class InputManager {
             brake.addEventListener('touchend', releaseBrake);
             brake.addEventListener('mousedown', pressBrake);
             brake.addEventListener('mouseup', releaseBrake);
+        }
+
+        if (boost) {
+            const pressBoost = (e) => { e.preventDefault(); this.keys.nitro = true; };
+            const releaseBoost = (e) => { e.preventDefault(); this.keys.nitro = false; };
+            boost.addEventListener('touchstart', pressBoost, { passive: false });
+            boost.addEventListener('touchend', releaseBoost);
+            boost.addEventListener('mousedown', pressBoost);
+            boost.addEventListener('mouseup', releaseBoost);
         }
     }
 }
