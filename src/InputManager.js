@@ -117,6 +117,7 @@ export class InputManager {
     setupPedals() {
         const gas = document.getElementById('gas-pedal');
         const brake = document.getElementById('brake-pedal');
+        const boost = document.getElementById('boost-pedal');
 
         if (gas) {
             const pressGas = (e) => { e.preventDefault(); this.keys.forward = true; };
@@ -136,6 +137,15 @@ export class InputManager {
             brake.addEventListener('touchend', releaseBrake);
             brake.addEventListener('mousedown', pressBrake);
             brake.addEventListener('mouseup', releaseBrake);
+        }
+
+        if (boost) {
+            const pressBoost = (e) => { e.preventDefault(); this.keys.nitro = true; };
+            const releaseBoost = (e) => { e.preventDefault(); this.keys.nitro = false; };
+            boost.addEventListener('touchstart', pressBoost, { passive: false });
+            boost.addEventListener('touchend', releaseBoost);
+            boost.addEventListener('mousedown', pressBoost);
+            boost.addEventListener('mouseup', releaseBoost);
         }
     }
 }
